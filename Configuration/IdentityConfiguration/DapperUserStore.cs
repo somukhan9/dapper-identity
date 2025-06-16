@@ -2,7 +2,6 @@
 using Configuration.DapperConfiguration.Abstractions;
 using DapperIdentity.Models.Identity;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 
 namespace Configuration.IdentityConfiguration;
 
