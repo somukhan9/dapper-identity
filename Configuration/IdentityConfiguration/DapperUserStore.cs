@@ -161,76 +161,92 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
     #region IUserEmailStore
     public Task SetEmailAsync(ApplicationUser user, string? email, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.Email = email;
+        return Task.CompletedTask;
     }
 
     public Task<string?> GetEmailAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.Email);
     }
 
     public Task<bool> GetEmailConfirmedAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.EmailConfirmed);
     }
 
     public Task SetEmailConfirmedAsync(ApplicationUser user, bool confirmed, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.EmailConfirmed = confirmed;
+        return Task.CompletedTask;
     }
 
-    public Task<ApplicationUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+    public async Task<ApplicationUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sql = "SELECT * FROM ApplicationUsers WHERE NormalizedEmail = @NormalizedEmail";
+
+        return await _context.QuerySingleOrDefaultAsync<ApplicationUser>(sql, param: new { NormalizedEmail = normalizedEmail });
     }
 
     public Task<string?> GetNormalizedEmailAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.NormalizedEmail);
     }
 
     public Task SetNormalizedEmailAsync(ApplicationUser user, string? normalizedEmail, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.NormalizedEmail = normalizedEmail;
+        return Task.CompletedTask;
     }
     #endregion
 
     #region IUserPasswordStore
     public Task SetPasswordHashAsync(ApplicationUser user, string? passwordHash, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.PasswordHash = passwordHash;
+        return Task.CompletedTask;
     }
 
     public Task<string?> GetPasswordHashAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.PasswordHash);
     }
 
     public Task<bool> HasPasswordAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
     }
     #endregion
 
     #region IUserPhoneNumberStore
     public Task SetPhoneNumberAsync(ApplicationUser user, string? phoneNumber, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.PhoneNumber = phoneNumber;
+        return Task.CompletedTask;
     }
 
     public Task<string?> GetPhoneNumberAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.PhoneNumber);
     }
 
     public Task<bool> GetPhoneNumberConfirmedAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.PhoneNumberConfirmed);
     }
 
     public Task SetPhoneNumberConfirmedAsync(ApplicationUser user, bool confirmed, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.PhoneNumberConfirmed = confirmed;
+        return Task.CompletedTask;
     }
     #endregion
 
@@ -314,12 +330,14 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
     #region IUserSecurityStampStore
     public Task SetSecurityStampAsync(ApplicationUser user, string stamp, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+        user.SecurityStamp = stamp;
+        return Task.CompletedTask;
     }
 
     public Task<string?> GetSecurityStampAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(user.SecurityStamp);
     }
     #endregion
 }
