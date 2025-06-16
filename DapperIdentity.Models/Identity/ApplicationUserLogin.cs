@@ -4,5 +4,5 @@ namespace DapperIdentity.Models.Identity;
 
 public class ApplicationUserLogin : IdentityUserLogin<int>
 {
-    public virtual ApplicationUser User { get; set; }
+    public virtual ApplicationUser? User { get; set; }
 }

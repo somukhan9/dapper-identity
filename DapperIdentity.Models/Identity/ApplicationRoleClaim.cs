@@ -4,5 +4,5 @@ namespace DapperIdentity.Models.Identity;
 
 public class ApplicationRoleClaim : IdentityRoleClaim<int>
 {
-    public virtual ApplicationRole Role { get; set; }
+    public virtual ApplicationRole? Role { get; set; }
 }

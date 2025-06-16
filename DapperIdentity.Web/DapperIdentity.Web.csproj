@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Configuration\Configuration.csproj" />
+    <ProjectReference Include="..\DapperIdentity.Configuration\DapperIdentity.Configuration.csproj" />
     <ProjectReference Include="..\DapperIdentity.Models\DapperIdentity.Models.csproj" />
   </ItemGroup>
 

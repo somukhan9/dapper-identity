@@ -1,6 +1,5 @@
-﻿
-using Configuration.DapperConfiguration;
-using Configuration.DapperConfiguration.Abstractions;
+﻿using Configuration.DapperConfiguration.Abstractions;
+using DapperIdentity.Configuration.DapperConfiguration;
 
 namespace DapperIdentity.Web.Extensions;
 

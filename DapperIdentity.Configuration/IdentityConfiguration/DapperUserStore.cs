@@ -1,9 +1,9 @@
-﻿using System.Security.Claims;
-using Configuration.DapperConfiguration.Abstractions;
+﻿using Configuration.DapperConfiguration.Abstractions;
 using DapperIdentity.Models.Identity;
 using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 
-namespace Configuration.IdentityConfiguration;
+namespace DapperIdentity.Configuration.IdentityConfiguration;
 
 public class DapperUserStore(IBaseDapperContext context) : IUserStore<ApplicationUser>
                                                            , IUserEmailStore<ApplicationUser>
@@ -28,7 +28,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
         return Task.FromResult(user.UserName);
     }
 
-    public Task SetUserNameAsync(ApplicationUser user, string userName, CancellationToken cancellationToken)
+    public Task SetUserNameAsync(ApplicationUser user, string? userName, CancellationToken cancellationToken)
     {
         user.UserName = userName;
         return Task.CompletedTask;
@@ -39,7 +39,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
         return Task.FromResult(user.NormalizedUserName);
     }
 
-    public Task SetNormalizedUserNameAsync(ApplicationUser user, string normalizedName,
+    public Task SetNormalizedUserNameAsync(ApplicationUser user, string? normalizedName,
         CancellationToken cancellationToken)
     {
         user.UserName = normalizedName;
