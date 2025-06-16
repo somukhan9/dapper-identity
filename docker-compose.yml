@@ -16,8 +16,6 @@ services:
       -  ConnectionStrings__DefaultConnection=Server=db;Database=DapperIdentity;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
     depends_on:
       - db
-    volumes:
-      - .:/src
     networks:
       - app-network
   db:
