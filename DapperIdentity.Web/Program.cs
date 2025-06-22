@@ -1,18 +1,20 @@
-using DapperIdentity.Web.Extensions;
+using Common.Extensions;
+using Common.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+// Dependency Injection Achieve through other extension class
+builder.Services.AddInfrastructureToServiceContainer(builder.Configuration);
 
 builder.Services.AddRouting(options =>
 {
-    options.LowercaseUrls = true;
-    options.LowercaseQueryStrings = true;
+    options.LowercaseUrls = true; // make url lower case
 });
 
-// Dependency Injection Achieve through other extension class
-builder.AddInfrastructureToServiceContainer();
 
 var app = builder.Build();
 
@@ -31,10 +33,20 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
+
+// camel case the query key but leave the query value untouched
+app.UseMiddleware<CamelCaseQueryKeysMiddleware>();
+
+// add global exception middleware
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
+
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{area=Guest}/{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+app.MapRazorPages();
 
 
 app.Run();

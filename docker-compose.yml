@@ -9,11 +9,13 @@ services:
     ports:
       - 8080:8080
       # - 8081:8081
+    volumes:
+      - .:/src
     environment:
-      -  ASPNETCORE_ENVIRONMENT=Development
-      -  ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
       # -  ASPNETCORE_HTTPS_PORTS=8081
-      -  ConnectionStrings__DefaultConnection=Server=db;Database=DapperIdentity;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=db;Initial Catalog=DapperIdentity;User Id=sa;Password=Israt@007@Jahan;TrustServerCertificate=True;
     depends_on:
       - db
     networks:
@@ -23,8 +25,8 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL-PID=Express
+      - SA_PASSWORD=Israt@007@Jahan
+      - MSSQL_PID=Express
     ports:
       - "11433:1433"
     volumes:

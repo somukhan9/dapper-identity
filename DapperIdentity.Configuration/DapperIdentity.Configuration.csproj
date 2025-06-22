@@ -7,13 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+    <Compile Remove="IdentityConfiguration\Abstractions\**" />
+    <EmbeddedResource Remove="IdentityConfiguration\Abstractions\**" />
+    <None Remove="IdentityConfiguration\Abstractions\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="IdentityConfiguration\Abstractions\" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>

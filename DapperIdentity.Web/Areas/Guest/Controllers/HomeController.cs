@@ -1,17 +1,13 @@
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using DapperIdentity.Models.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
-namespace DapperIdentity.Web.Controllers;
+namespace DapperIdentity.Web.Areas.Guest.Controllers;
 
-public class HomeController : Controller
+[Area(areaName: "Guest")]
+public class HomeController(ILogger<HomeController> logger) : Controller
 {
-    private readonly ILogger<HomeController> _logger;
-
-    public HomeController(ILogger<HomeController> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<HomeController> _logger = logger;
 
     public IActionResult Index()
     {

@@ -1,6 +1,7 @@
-﻿using Configuration.DapperConfiguration.Abstractions;
+﻿using DapperIdentity.Configuration.DapperConfiguration.Abstractions;
 using DapperIdentity.Models.Identity;
 using Microsoft.AspNetCore.Identity;
+using System.Data;
 using System.Security.Claims;
 
 namespace DapperIdentity.Configuration.IdentityConfiguration;
@@ -14,10 +15,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
                                                            , IUserRoleStore<ApplicationUser>
                                                            , IUserSecurityStampStore<ApplicationUser>
 {
-    private IBaseDapperContext _context = context;
-
     #region IUserStore
-
     public Task<string> GetUserIdAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
         return Task.FromResult(user.Id.ToString());
@@ -55,28 +53,22 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
         user.ConcurrencyStamp = Guid.NewGuid().ToString();
         user.SecurityStamp = Guid.NewGuid().ToString();
 
-        try
-        {
-            var sql = @"INSERT INTO ApplicationUsers 
+        user.UserName ??= user.Email;
+        user.NormalizedUserName ??= user.NormalizedEmail;
+
+        var sql = @"INSERT INTO ApplicationUsers 
                             (UserName, NormalizedUserName, Email, NormalizedEmail, EmailConfirmed, 
                             PasswordHash, SecurityStamp, ConcurrencyStamp, PhoneNumber, PhoneNumberConfirmed, 
                             TwoFactorEnabled, LockoutEnabled, AccessFailedCount, FirstName, LastName)
                             VALUES (@UserName, @NormalizedUserName, @Email, @NormalizedEmail, @EmailConfirmed, 
                             @PasswordHash, @SecurityStamp, @ConcurrencyStamp, @PhoneNumber, @PhoneNumberConfirmed, 
                             @TwoFactorEnabled, @LockoutEnabled, @AccessFailedCount, @FirstName, @LastName);
-                            SELECT CAST(SCOPE_IDENTITY() as int)";
+                            SELECT CAST(SCOPE_IDENTITY() as INT)";
 
-            var result = await _context.ExecuteAsync(sql, param: user);
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError() { Description = "Error occured while creating a user." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"EXCEPTION MESSAGE :: {ex.Message}");
-            Console.WriteLine($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError() { Description = "Error occured while creating a user." });
-        }
+        var result = await context.ExecuteAsync(sql, param: user);
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError() { Description = "Error occured while creating a user." });
     }
 
     public async Task<IdentityResult> UpdateAsync(ApplicationUser user, CancellationToken cancellationToken)
@@ -85,9 +77,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
 
         if (user == null) throw new ArgumentNullException(nameof(user));
 
-        try
-        {
-            var sql = @"UPDATE ApplicationUsers SET UserName = @UserName, NormalizedUserName = @NormalizedUserName, 
+        var sql = @"UPDATE ApplicationUsers SET UserName = @UserName, NormalizedUserName = @NormalizedUserName, 
                         Email = @Email, NormalizedEmail = @NormalizedEmail, EmailConfirmed = @EmailConfirmed, 
                         PasswordHash = @PasswordHash, SecurityStamp = @SecurityStamp, 
                         ConcurrencyStamp = @ConcurrencyStamp, PhoneNumber = @PhoneNumber, 
@@ -96,17 +86,10 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
                         AccessFailedCount = @AccessFailedCount, FirstName = @FirstName, LastName = @LastName
                         WHERE Id = @Id";
 
-            var result = await _context.ExecuteAsync(sql, param: user);
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError() { Description = "Error occured while updating a user." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"EXCEPTION MESSAGE :: {ex.Message}");
-            Console.WriteLine($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError() { Description = "Error occured while updating a user." });
-        }
+        var result = await context.ExecuteAsync(sql, param: user);
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError() { Description = "Error occured while updating a user." });
     }
 
     public async Task<IdentityResult> DeleteAsync(ApplicationUser user, CancellationToken cancellationToken)
@@ -115,21 +98,25 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
 
         if (user == null) throw new ArgumentNullException(nameof(user));
 
-        try
-        {
-            var sql = "DELETE FROM ApplicationUsers WHERE Id = @Id";
+        var deleteUserCommand = @"DELETE FROM ApplicationUsers WHERE Id = @Id";
+        var deleteUserRolesCommand =
+            @"DELETE FROM [DapperIdentity].[dbo].[ApplicationUserRoles] WHERE [UserId] = @UserId";
+        var deleteUserLoginsCommand = @"DELETE FROM [DapperIdentity].[dbo].[ApplicationUserLogins] WHERE [UserId] = @UserId";
+        var deleteUserTokensCommand = @"DELETE FROM [DapperIdentity].[dbo].[ApplicationUserTokens] WHERE [UserId] = @UserId";
+        var deleteUserClaimsCommand = @"DELETE FROM [DapperIdentity].[dbo].[ApplicationUserClaims] WHERE [UserId] = @UserId";
 
-            var result = await _context.ExecuteAsync(sql, param: new { Id = user.Id });
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError() { Description = "Error occured while deleting a user." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"EXCEPTION MESSAGE :: {ex.Message}");
-            Console.WriteLine($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError() { Description = "Error occured while deleting a user." });
-        }
+        var commands = new List<CommandSql>() {
+                new CommandSql(deleteUserCommand, new { Id = user.Id}),
+                new CommandSql(deleteUserRolesCommand, new { UserId = user.Id}),
+                new CommandSql(deleteUserLoginsCommand, new { UserId = user.Id}),
+                new CommandSql(deleteUserTokensCommand, new { UserId = user.Id}),
+                new CommandSql(deleteUserClaimsCommand, new { UserId = user.Id}),
+            };
+
+        var result = await context.ExecuteAsync(commands);
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError() { Description = "Error occured while deleting a user." });
     }
 
     public async Task<ApplicationUser?> FindByIdAsync(string userId, CancellationToken cancellationToken)
@@ -138,7 +125,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
 
         var sql = "SELECT * FROM ApplicationUsers WHERE Id = @Id";
 
-        return await _context.QuerySingleOrDefaultAsync<ApplicationUser>(sql, param: new { Id = userId });
+        return await context.QuerySingleOrDefaultAsync<ApplicationUser>(sql, param: new { Id = userId });
     }
 
     public async Task<ApplicationUser?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
@@ -147,15 +134,13 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
 
         var sql = "SELECT * FROM ApplicationUsers WHERE NormalizedUserName = @NormalizedUserName";
 
-        return await _context.QuerySingleOrDefaultAsync<ApplicationUser>(sql,
+        return await context.QuerySingleOrDefaultAsync<ApplicationUser>(sql,
             param: new { NormalizedUserName = normalizedUserName });
     }
 
     public void Dispose()
     {
-        _context = null!;
     }
-
     #endregion
 
     #region IUserEmailStore
@@ -189,7 +174,7 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
 
         var sql = "SELECT * FROM ApplicationUsers WHERE NormalizedEmail = @NormalizedEmail";
 
-        return await _context.QuerySingleOrDefaultAsync<ApplicationUser>(sql, param: new { NormalizedEmail = normalizedEmail });
+        return await context.QuerySingleOrDefaultAsync<ApplicationUser>(sql, param: new { NormalizedEmail = normalizedEmail });
     }
 
     public Task<string?> GetNormalizedEmailAsync(ApplicationUser user, CancellationToken cancellationToken)
@@ -251,29 +236,94 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
     #endregion
 
     #region IUserClaimStore
-    public Task<IList<Claim>> GetClaimsAsync(ApplicationUser user, CancellationToken cancellationToken)
+    public async Task<IList<Claim>> GetClaimsAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var sql =
+            @"SELECT [ClaimType], [ClaimValue] FROM [DapperIdentity].[dbo].[ApplicationUserClaims] WHERE [UserId] = @UserId";
+
+        var userClaims = await context.QueryAsync<ApplicationUserClaim>(sql, new { UserId = user.Id });
+
+        return userClaims.Select(uc => new Claim(uc.ClaimType!, uc.ClaimValue!)).ToList();
     }
 
-    public Task AddClaimsAsync(ApplicationUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    public async Task AddClaimsAsync(ApplicationUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var commands = new List<CommandSql>();
+
+        foreach (var claim in claims)
+        {
+            var sql = @"INSERT INTO [DapperIdentity].[dbo].[ApplicationUserClaims] ([UserId], [ClaimType], [ClaimValue])
+                        VALUES (@UserId, @ClaimType, @ClaimValue)";
+
+            commands.Add(new CommandSql(sql, new { UserId = user.Id, ClaimType = claim.Type, ClaimValue = claim.Value }));
+        }
+
+        await context.ExecuteAsync(commands);
     }
 
-    public Task ReplaceClaimAsync(ApplicationUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
+    public async Task ReplaceClaimAsync(ApplicationUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var sql = @"UPDATE [DapperIdentity].[dbo].[ApplicationUserClaims] 
+                SET ClaimType = @NewType, ClaimValue = @NewValue 
+                WHERE UserId = @UserId AND ClaimType = @OldType AND ClaimValue = @OldValue";
+
+        await context.ExecuteAsync(sql,
+            new
+            {
+                UserId = user.Id,
+                OldType = claim.Type,
+                OldValue = claim.Value,
+                NewType = newClaim.Type,
+                NewValue = claim.Value
+            });
     }
 
-    public Task RemoveClaimsAsync(ApplicationUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    public async Task RemoveClaimsAsync(ApplicationUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var commands = new List<CommandSql>();
+
+        foreach (var claim in claims)
+        {
+            var sql = "DELETE FROM UserClaims WHERE UserId = @UserId AND ClaimType = @ClaimType AND ClaimValue = @ClaimValue";
+
+            commands.Add(new CommandSql(sql, new { UserId = user.Id, ClaimType = claim.Type, ClaimValue = claim.Value }));
+        }
+
+        await context.ExecuteAsync(commands);
+
     }
 
-    public Task<IList<ApplicationUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
+    public async Task<IList<ApplicationUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (claim is null) throw new ArgumentNullException(nameof(claim));
+
+        var sql = @"SELECT ui.*
+                    FROM [DapperIdentity].[dbo].[ApplicationUsers] u
+                    INNER JOIN [DapperIdentity].[dbo].[ApplicationUserClaims] uc ON uc.UserId = u.Id
+                    WHERE uc.[ClaimType] = @ClaimType AND uc.[ClaimValue] = @ClaimValue";
+
+        var users = await context.QueryAsync<ApplicationUser>(sql, new { ClaimType = claim.Type, ClaimValue = claim.Value });
+
+        return users.ToList();
+
     }
     #endregion
 
@@ -301,29 +351,85 @@ public class DapperUserStore(IBaseDapperContext context) : IUserStore<Applicatio
     #endregion
 
     #region IUserRoleStore
-    public Task AddToRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
+    public async Task AddToRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var roleSqlQuery =
+            @"SELECT Id FROM [DapperIdentity].[dbo].[ApplicationRoles] WHERE [NormalizedName] = @NormalizedName";
+
+        var roleId = await context.QuerySingleOrDefaultAsync<int>(roleSqlQuery, new { NormalizedName = roleName.ToUpper() });
+
+        if (roleId <= 0) throw new InvalidOperationException($"Role with name ${roleName} is not found.");
+
+        var userRoleSqlCommand =
+                @"INSERT INTO [DapperIdentity].[dbo].[ApplicationUserRoles] ([UserId], [RoleId]) VALUE (@UserId, @RoleId)";
+
+        await context.ExecuteAsync(userRoleSqlCommand, new { UserId = user.Id, RoleId = roleId });
+
     }
 
-    public Task RemoveFromRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
+    public async Task RemoveFromRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (user is null) throw new ArgumentNullException(nameof(user));
+
+        var roleSqlQuery =
+            @"SELECT Id FROM [DapperIdentity].[dbo].[ApplicationRoles] WHERE [NormalizedName] = @NormalizedName";
+
+        var roleId = await context.QuerySingleOrDefaultAsync<int>(roleSqlQuery, new { NormalizedName = roleName.ToUpper() });
+
+        if (roleId <= 0) throw new InvalidOperationException($"Role with name ${roleName} is not found.");
+
+        var userRoleSqlCommand =
+            @"DELETE FROM [DapperIdentity].[dbo].[ApplicationUserRoles] WHERE [RoleId] = @RoleId";
+
+        await context.ExecuteAsync(userRoleSqlCommand, new { UserId = user.Id, RoleId = roleId });
     }
 
-    public Task<IList<string>> GetRolesAsync(ApplicationUser user, CancellationToken cancellationToken)
+    public async Task<IList<string>> GetRolesAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sql = @"SELECT r.[Name]
+                    FROM [DapperIdentity].[dbo].[ApplicationUserRoles] ur
+                    INNER JOIN [DapperIdentity].[dbo].[ApplicationRoles] r ON r.[Id] = ur.[RoleId]
+                    WHERE ur.[UserId] = @UserId";
+
+        var result = await context.QueryAsync<string>(sql, new { UserId = user.Id });
+        return result.ToList();
     }
 
-    public Task<bool> IsInRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
+    public async Task<bool> IsInRoleAsync(ApplicationUser user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sql = @"SELECT ur.[UserId]
+                    FROM [DapperIdentity].[dbo].[ApplicationUserRoles] ur
+                    INNER JOIN [DapperIdentity].[dbo].[ApplicationRoles] r ON r.[Id] = ur.[RoleId]
+                    WHERE ur.[UserId] = @UserId AND r.[NormalizedName] = @NormalizedName";
+
+        var result = await context.QueryFirstOrDefaultAsync<int>(sql, new { UserId = user.Id, NormalizedName = roleName.ToUpper() });
+
+        return result > 0;
     }
 
-    public Task<IList<ApplicationUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
+    public async Task<IList<ApplicationUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var sql = @"SELECT u.*
+                    FROM [DapperIdentity].[dbo].[ApplicationUsers] u
+                    INNER JOIN [DapperIdentity].[dbo].[ApplicationUserRoles] ur ON ur.[UserId] ] = u.[Id]
+                    INNER JOIN [DapperIdentity].[dbo].[ApplicationRoles] r ON r.[Id] = ur.[RoleId]
+                    WHERE r.[NormalizedName] = @NormalizedName";
+
+        var users = await context.QueryAsync<ApplicationUser>(sql, new { NormalizedName = roleName });
+
+        return users.ToList();
     }
     #endregion
 
