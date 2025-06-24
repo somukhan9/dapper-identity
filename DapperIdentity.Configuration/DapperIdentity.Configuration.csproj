@@ -1,25 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="IdentityConfiguration\Abstractions\**" />
-    <EmbeddedResource Remove="IdentityConfiguration\Abstractions\**" />
-    <None Remove="IdentityConfiguration\Abstractions\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="IdentityConfiguration\Abstractions\**" />
+		<EmbeddedResource Remove="IdentityConfiguration\Abstractions\**" />
+		<None Remove="IdentityConfiguration\Abstractions\**" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.66" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+		<PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DapperIdentity.Models\DapperIdentity.Models.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\DapperIdentity.Models\DapperIdentity.Models.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
 
 </Project>

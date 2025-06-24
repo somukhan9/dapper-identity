@@ -1,5 +1,4 @@
-﻿@using DapperIdentity.Web.Areas.Identity.Views.ManageAccount
-@model DapperIdentity.Models.ViewModels.Account.ManageAccountViewModel
+﻿@model ProfileViewModel
 
 @{
     ViewData["Title"] = "Profile";
@@ -7,13 +6,13 @@
 }
 
 <h3>@ViewData["Title"]</h3>
-<partial name="_StatusMessage" for="@Model.StatusMessage" />
+<partial name="_StatusMessage" model="ViewBag.StatusMessage" />
 <div class="row">
     <div class="col-md-6">
         <form id="profile-form" method="post" asp-area="Identity" asp-controller="ManageAccount" asp-action="Index">
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
             <div class="form-floating mb-3">
-                <input asp-for="Username" class="form-control" placeholder="Please choose your username." disabled />
+                <input asp-for="Username" class="form-control" placeholder="Please choose your username." readonly />
                 <label asp-for="Username" class="form-label"></label>
             </div>
             <div class="form-floating mb-3">
