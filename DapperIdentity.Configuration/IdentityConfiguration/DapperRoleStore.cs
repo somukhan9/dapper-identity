@@ -13,25 +13,20 @@ public class DapperRoleStore(IBaseDapperContext context, ILogger<DapperRoleStore
 
         if (role == null) throw new ArgumentNullException(nameof(role));
 
-        try
-        {
-            var sql = @"INSERT INTO [DapperIdentity].[dbo].[ApplicationRoles] ([Name],[NormalizedName],[ConcurrencyStamp])
-                        VALUES ([Name],[NormalizedName],[ConcurrencyStamp]);
-                        SELECT CAST(SCOPE_IDENTITY AS INT)";
+        var sql = @"INSERT INTO [DapperIdentity].[dbo].[ApplicationRoles] ([Name],[NormalizedName],[ConcurrencyStamp])
+                        VALUES (@Name,@NormalizedName,@ConcurrencyStamp);
+                        SELECT CAST(SCOPE_IDENTITY() AS INT)";
 
-            role.ConcurrencyStamp = Guid.NewGuid().ToString();
+        role.ConcurrencyStamp ??= Guid.NewGuid().ToString();
+        role.NormalizedName ??= role.Name!.ToUpper();
 
-            var result = await context.ExecuteAsync(sql, param: role);
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError { Description = "Error occured while creating role." });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError($"EXCEPTION MESSAGE :: {ex.Message}");
-            logger.LogError($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError { Description = "Error occured while creating role." });
-        }
+
+        var result = await context.QuerySingleOrDefaultAsync<int>(sql, param: role);
+        role.Id = result;
+
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError { Description = "Error occured while creating role." });
     }
 
     public async Task<IdentityResult> UpdateAsync(ApplicationRole role, CancellationToken cancellationToken)
@@ -40,26 +35,17 @@ public class DapperRoleStore(IBaseDapperContext context, ILogger<DapperRoleStore
 
         if (role == null) throw new ArgumentNullException(nameof(role));
 
-        try
-        {
-            var sql = @"UPDATE [DapperIdentity].[dbo].[ApplicationRoles]
+        var sql = @"UPDATE [DapperIdentity].[dbo].[ApplicationRoles]
                            SET [Name] = @Name
                               ,[NormalizedName] = @NormalizedName
                               ,[ConcurrencyStamp] = @ConcurrencyStamp
                          WHERE [Id] = @Id";
 
 
-            var result = await context.ExecuteAsync(sql, role);
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError { Description = "Error occured while updating role." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"EXCEPTION MESSAGE :: {ex.Message}");
-            Console.WriteLine($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError { Description = "Error occured while updating role." });
-        }
+        var result = await context.ExecuteAsync(sql, role);
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError { Description = "Error occured while updating role." });
     }
 
     public async Task<IdentityResult> DeleteAsync(ApplicationRole role, CancellationToken cancellationToken)
@@ -68,22 +54,13 @@ public class DapperRoleStore(IBaseDapperContext context, ILogger<DapperRoleStore
 
         if (role == null) throw new ArgumentNullException(nameof(role));
 
-        try
-        {
-            var sql = @"DELETE FROM [DapperIdentity].[dbo].[ApplicationRoles]
+        var sql = @"DELETE FROM [DapperIdentity].[dbo].[ApplicationRoles]
                         WHERE [Id] = @Id";
 
-            var result = await context.ExecuteAsync(sql, role);
-            return result > 0
-                ? IdentityResult.Success
-                : IdentityResult.Failed(new IdentityError { Description = "Error occured while deleting role." });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"EXCEPTION MESSAGE :: {ex.Message}");
-            Console.WriteLine($"EXCEPTION :: {ex}");
-            return IdentityResult.Failed(new IdentityError { Description = "Error occured while updating role." });
-        }
+        var result = await context.ExecuteAsync(sql, role);
+        return result > 0
+            ? IdentityResult.Success
+            : IdentityResult.Failed(new IdentityError { Description = "Error occured while deleting role." });
     }
 
     public Task<string> GetRoleIdAsync(ApplicationRole role, CancellationToken cancellationToken)

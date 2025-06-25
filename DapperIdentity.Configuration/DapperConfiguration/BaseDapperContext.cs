@@ -95,6 +95,8 @@ public class BaseDapperContext(IConfiguration config) : IBaseDapperContext
     public int Execute(List<CommandSql> commands)
     {
         using var connection = new SqlConnection(_connectionString);
+        connection.Open();
+
         using var transaction = connection.BeginTransaction();
 
         var totalAffectedRow = 0;
@@ -130,6 +132,8 @@ public class BaseDapperContext(IConfiguration config) : IBaseDapperContext
     public async Task<int> ExecuteAsync(List<CommandSql> commands)
     {
         using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
         using var transaction = connection.BeginTransaction();
 
         var totalAffectedRow = 0;

@@ -1,4 +1,5 @@
-﻿using DapperIdentity.Models.Identity;
+﻿using Common.Constants;
+using DapperIdentity.Models.Identity;
 using DapperIdentity.Models.ViewModels.Account;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -18,19 +19,22 @@ public class AccountController : Controller
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IUserStore<ApplicationUser> _userStore;
     private readonly IUserEmailStore<ApplicationUser> _emailStore;
+    private readonly IRoleStore<ApplicationRole> _roleStore;
     private readonly IEmailSender _emailSender;
 
     public AccountController(ILogger<AccountController> logger,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
         IUserStore<ApplicationUser> userStore,
-        IEmailSender emailSender)
+        IEmailSender emailSender,
+        IRoleStore<ApplicationRole> roleStore)
     {
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
         _userStore = userStore;
         _emailStore = GetEmailStore();
+        _roleStore = roleStore;
         _emailSender = emailSender;
     }
 
@@ -96,30 +100,55 @@ public class AccountController : Controller
     public async Task<IActionResult> Register(string? returnUrl = null)
     {
         returnUrl ??= Url.Content("~/");
-        var registerVM = new RegisterViewModel
+        var vm = new RegisterViewModel
         {
             ReturnUrl = returnUrl,
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList()
         };
-        return View(registerVM);
+        return View(vm);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Register(RegisterViewModel registerVM, string? returnUrl = null)
+    public async Task<IActionResult> Register(RegisterViewModel vm, CancellationToken cancellationToken, string? returnUrl = null)
     {
-        registerVM.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        // Create Admin Role if does not exist
+        var roleAdmin = await _roleStore.FindByNameAsync(SD.ROLE_ADMIN, cancellationToken);
+        if (roleAdmin is null)
+            await _roleStore.CreateAsync(new ApplicationRole()
+            {
+                Name = SD.ROLE_ADMIN
+            }, cancellationToken);
+
+        // Create Guest Role if does not exist
+        var roleGuest = await _roleStore.FindByNameAsync(SD.ROLE_GUEST, cancellationToken);
+        if (roleGuest is null)
+            await _roleStore.CreateAsync(new ApplicationRole()
+            {
+                Name = SD.ROLE_GUEST
+            }, cancellationToken);
+
+        // Actual registration process starts from here
+        vm.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
         if (ModelState.IsValid)
         {
             var user = CreateUser();
 
-            await _userStore.SetUserNameAsync(user, registerVM.Email, CancellationToken.None);
-            await _emailStore.SetEmailAsync(user, registerVM.Email, CancellationToken.None);
+            await _userStore.SetUserNameAsync(user, vm.Email, CancellationToken.None);
+            await _emailStore.SetEmailAsync(user, vm.Email, CancellationToken.None);
 
-            var result = await _userManager.CreateAsync(user, registerVM.Password);
+            var result = await _userManager.CreateAsync(user, vm.Password);
 
             if (result.Succeeded)
             {
                 _logger.LogInformation("User created a new account with password.");
+
+                // Assign role to user
+                if (string.IsNullOrEmpty(vm.Role))
+                    await _userManager.AddToRoleAsync(user, SD.ROLE_GUEST);
+                else
+                    await _userManager.AddToRoleAsync(user, vm.Role);
+
+                _logger.LogInformation($"Successfully assigned role to user {user.UserName}.");
 
                 var userId = await _userManager.GetUserIdAsync(user);
                 var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -133,24 +162,24 @@ public class AccountController : Controller
                 // Just for testing coz email sender is not implemented yet.
                 _logger.LogInformation($"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
-                await _emailSender.SendEmailAsync(registerVM.Email, "Confirm your email",
+                await _emailSender.SendEmailAsync(vm.Email, "Confirm your email",
                     $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
 
                 if (_userManager.Options.SignIn.RequireConfirmedAccount)
                 {
-                    //return RedirectToAction("RegisterConfirmation", new { email = registerVM.Email, returnUrl = returnUrl });
-                    //return RedirectToPage("RegisterConfirmation", new { email = registerVM.Email, returnUrl = returnUrl });
+                    //return RedirectToAction("RegisterConfirmation", new { email = vm.Email, returnUrl = returnUrl });
+                    //return RedirectToPage("RegisterConfirmation", new { email = vm.Email, returnUrl = returnUrl });
                 }
                 else
                 {
                     await _signInManager.SignInAsync(user, isPersistent: false);
 
-                    if (string.IsNullOrEmpty(registerVM.ReturnUrl))
+                    if (string.IsNullOrEmpty(vm.ReturnUrl))
                     {
                         return RedirectToAction("Index", "Home", new { area = "Guest" });
                     }
 
-                    return LocalRedirect(registerVM.ReturnUrl);
+                    return LocalRedirect(vm.ReturnUrl);
                 }
             }
             foreach (var error in result.Errors)
@@ -158,12 +187,12 @@ public class AccountController : Controller
                 ModelState.AddModelError(string.Empty, error.Description);
             }
 
-            return View("Register", registerVM);
+            return View("Register", vm);
         }
 
         ModelState.AddModelError(string.Empty, "Something went wrong.");
         // If we got this far, something failed, redisplay form
-        return View("Register", registerVM);
+        return View("Register", vm);
     }
 
     public async Task<IActionResult> Logout(string? returnUrl = null)
