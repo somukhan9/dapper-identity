@@ -15,7 +15,11 @@ public static class InfrastructureExtension
     public static void AddInfrastructureToServiceContainer(this IServiceCollection services, IConfiguration config)
     {
         // Identity Services
-        services.AddIdentity<ApplicationUser, ApplicationRole>()
+        services.AddIdentity<ApplicationUser, ApplicationRole>(o =>
+            {
+                o.User.RequireUniqueEmail = true;
+                o.SignIn.RequireConfirmedEmail = true;
+            })
             .AddUserStore<DapperUserStore>()
             .AddRoleStore<DapperRoleStore>()
             .AddDefaultTokenProviders();

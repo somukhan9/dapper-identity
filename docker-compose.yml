@@ -4,11 +4,10 @@ services:
   webapp:
     container_name: dapper-identity-webapp
     build:
-        context: .
-        dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - 8080:8080
-      # - 8081:8081
+      - "8080:8080"
     volumes:
       - .:/src
     environment:
@@ -20,6 +19,7 @@ services:
       - db
     networks:
       - app-network
+
   db:
     container_name: dapper-identity-db
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -33,6 +33,13 @@ services:
       - mssql-data:/var/opt/mssql
     networks:
       - app-network
+  
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
 
 volumes:
   mssql-data:

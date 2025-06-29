@@ -1,4 +1,4 @@
-﻿@model DapperIdentity.Models.ViewModels.Account.RegisterViewModel
+﻿@model RegisterViewModel
 @{
     ViewData["Title"] = "Register";
 }
@@ -48,7 +48,7 @@
                 }
                 else
                 {
-                    <form id="external-account" asp-page="./ExternalLogin" method="post" class="form-horizontal">
+                    <form id="external-account" @*asp-page="./ExternalLogin"*@ method="post" class="form-horizontal">
                         <div>
                             <p>
                                 @foreach (var provider in Model.ExternalLogins!)

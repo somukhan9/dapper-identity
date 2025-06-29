@@ -1,12 +1,12 @@
-﻿using DapperIdentity.Models.Identity;
+﻿using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using DapperIdentity.Models.Identity;
 using DapperIdentity.Models.ViewModels.Account;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Text.Json;
 
 namespace DapperIdentity.Web.Areas.Identity.Controllers;
 
@@ -122,18 +122,20 @@ public class ManageAccountController(
             var userId = await userManager.GetUserIdAsync(user);
             var code = await userManager.GenerateChangeEmailTokenAsync(user, vm.NewEmail);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-            var callbackUrl = Url.Page(
-                "/Account/ConfirmEmailChange",
-                pageHandler: null,
+            
+            var callbackUrl = Url.Action(
+                action: "ConfirmEmailChange",
+                controller: "ManageAccount",
                 values: new { area = "Identity", userId = userId, email = vm.NewEmail, code = code },
-                protocol: Request.Scheme);
+                protocol: Request.Scheme
+            );
             await emailSender.SendEmailAsync(
                 vm.NewEmail,
                 "Confirm your email",
-                $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl!)}'>clicking here</a>.");
 
             ViewBag.StatusMessage = "Confirmation link to change email sent. Please check your email.";
-            //await userManager.SetEmailAsync(user, vm.NewEmail);
+            await userManager.SetEmailAsync(user, vm.NewEmail);
             return View(vm);
         }
 
@@ -179,6 +181,7 @@ public class ManageAccountController(
             {
                 ModelState.AddModelError(string.Empty, error.Description);
             }
+
             return View();
         }
 
@@ -257,7 +260,7 @@ public class ManageAccountController(
 
     {
         var user = await userManager.GetUserAsync(User);
-        if (user == null)
+        if (user is null)
         {
             return NotFound($"Unable to load user with ID '{userManager.GetUserId(User)}'.");
         }
@@ -285,5 +288,40 @@ public class ManageAccountController(
         logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
 
         return Redirect("~/");
+    }
+
+    public async Task<IActionResult> ConfirmEmailChange(string? userId, string? email, string? code)
+    {
+        if (userId is null || email is null || code is null)
+        {
+            return RedirectToAction("Index", "Home", new { area = "Guest" });
+        }
+
+        var user = await userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return NotFound($"Unable to load user with ID '{userId}'.");
+        }
+
+        code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+        var result = await userManager.ChangeEmailAsync(user, email, code);
+        if (!result.Succeeded)
+        {
+            ViewBag.StatusMessage = "Error changing email.";
+            return View();
+        }
+
+        // In our UI email and user name are one and the same, so when we update the email
+        // we need to update the user name.
+        var setUserNameResult = await userManager.SetUserNameAsync(user, email);
+        if (!setUserNameResult.Succeeded)
+        {
+            ViewBag.StatusMessage = "Error changing user name.";
+            return View();
+        }
+
+        await signInManager.RefreshSignInAsync(user);
+        ViewBag.StatusMessage = "Thank you for confirming your email change.";
+        return View();
     }
 }

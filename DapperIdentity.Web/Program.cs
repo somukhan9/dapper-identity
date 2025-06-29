@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
+//builder.Services.AddRazorPages();
 // Dependency Injection Achieve through other extension class
 builder.Services.AddInfrastructureToServiceContainer(builder.Configuration);
 
@@ -45,8 +45,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{area=Guest}/{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
-app.MapRazorPages();
 
 
 app.Run();
