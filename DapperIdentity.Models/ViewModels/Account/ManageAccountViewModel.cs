@@ -89,5 +89,5 @@ public class ResetPasswordViewModel
     public string ConfirmPassword { get; set; }
 
     [Required]
-    public string Code { get; set; }
+    public string Token { get; set; }
 }

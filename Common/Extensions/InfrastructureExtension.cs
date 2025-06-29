@@ -19,6 +19,7 @@ public static class InfrastructureExtension
             {
                 o.User.RequireUniqueEmail = true;
                 o.SignIn.RequireConfirmedEmail = true;
+                o.SignIn.RequireConfirmedAccount = true;
             })
             .AddUserStore<DapperUserStore>()
             .AddRoleStore<DapperRoleStore>()

@@ -197,7 +197,7 @@ public class AccountController : Controller
     {
         if (email is null)
         {
-            return RedirectToPage("/Index");
+            return RedirectToAction("Index", "Home", new { area = "Guest" });
         }
 
         returnUrl = returnUrl ?? Url.Content("~/");
@@ -232,19 +232,6 @@ public class AccountController : Controller
         return View(vm);
     }
 
-    public async Task<IActionResult> Logout(string? returnUrl = null)
-    {
-        await _signInManager.SignOutAsync();
-        _logger.LogInformation("User logged out.");
-
-        if (string.IsNullOrEmpty(returnUrl))
-        {
-            return RedirectToAction("Index", "Home", new { area = "Guest" });
-        }
-
-        return LocalRedirect(returnUrl);
-    }
-
     public async Task<IActionResult> ConfirmEmail(string? userId, string? code)
     {
         if (userId is null || code is null)
@@ -263,6 +250,19 @@ public class AccountController : Controller
         ViewBag.StatusMessage =
             result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
         return View();
+    }
+
+    public async Task<IActionResult> Logout(string? returnUrl = null)
+    {
+        await _signInManager.SignOutAsync();
+        _logger.LogInformation("User logged out.");
+
+        if (string.IsNullOrEmpty(returnUrl))
+        {
+            return RedirectToAction("Index", "Home", new { area = "Guest" });
+        }
+
+        return LocalRedirect(returnUrl);
     }
 
     public IActionResult ForgotPassword()
@@ -287,6 +287,9 @@ public class AccountController : Controller
             // For more information on how to enable account confirmation and password reset please
             // visit https://go.microsoft.com/fwlink/?LinkID=532713
             var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            _logger.LogInformation($"Reset Password Code Before Encoding ::::: {code}");
+
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
             // This is for MVC
@@ -303,7 +306,6 @@ public class AccountController : Controller
                 $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl!)}'>clicking here</a>.");
 
             _logger.LogInformation($"Reset Password Email ::: {HtmlEncoder.Default.Encode(callbackUrl)}");
-            _logger.LogInformation($"Reset Password Code :: {code}");
 
             return RedirectToAction(nameof(ForgotPasswordConfirmation));
         }
@@ -322,14 +324,15 @@ public class AccountController : Controller
         {
             return BadRequest("A code must be supplied for password reset.");
         }
-        else
+        
+        var decodedCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+        _logger.LogInformation($"After Decoding::::{decodedCode}");
+
+        var vm = new ResetPasswordViewModel()
         {
-            var vm = new ResetPasswordViewModel()
-            {
-                Code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code))
-            };
-            return View(vm);
-        }
+            Token = decodedCode
+        };
+        return View(vm);
     }
 
     [HttpPost]
@@ -347,7 +350,7 @@ public class AccountController : Controller
             return RedirectToAction(nameof(ResetPasswordConfirmation));
         }
 
-        var result = await _userManager.ResetPasswordAsync(user, vm.Code, vm.Password);
+        var result = await _userManager.ResetPasswordAsync(user, vm.Token, vm.Password);
         if (result.Succeeded)
         {
             return RedirectToAction(nameof(ResetPasswordConfirmation));
