@@ -6,9 +6,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-//builder.Services.AddRazorPages();
+
 // Dependency Injection Achieve through other extension class
-builder.Services.AddInfrastructureToServiceContainer(builder.Configuration);
+builder.Services.AddApplicationServices(builder.Configuration);
+
+builder.Services.AddApplicationIdentity(builder.Configuration);
 
 builder.Services.AddRouting(options =>
 {

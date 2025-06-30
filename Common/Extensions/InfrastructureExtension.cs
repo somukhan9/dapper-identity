@@ -12,35 +12,29 @@ namespace Common.Extensions;
 
 public static class InfrastructureExtension
 {
-    public static void AddInfrastructureToServiceContainer(this IServiceCollection services, IConfiguration config)
+    public static void AddApplicationServices(this IServiceCollection services, IConfiguration config)
     {
-        // Identity Services
-        services.AddIdentity<ApplicationUser, ApplicationRole>(o =>
+        services.AddSingleton<IEmailSender, EmailSender>();
+        services.AddSingleton<IBaseDapperContext>(_ => new BaseDapperContext(config));
+    }
+
+    public static void AddApplicationIdentity(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
-                o.User.RequireUniqueEmail = true;
-                o.SignIn.RequireConfirmedEmail = true;
-                o.SignIn.RequireConfirmedAccount = true;
+                options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = true;
+                options.SignIn.RequireConfirmedAccount = true;
             })
             .AddUserStore<DapperUserStore>()
             .AddRoleStore<DapperRoleStore>()
             .AddDefaultTokenProviders();
 
-        // Configure Application Cookie
         services.ConfigureApplicationCookie(options =>
         {
             options.LoginPath = $"/identity/account/login";
             options.LogoutPath = $"/identity/account/logout";
             options.AccessDeniedPath = $"/identity/account/accessdenied";
-
-            /*options.LoginPath = $"/Identity/Account/Login";
-            options.LogoutPath = $"/Identity/Account/Logout";
-            options.AccessDeniedPath = $"/Identity/Account/AccessDenied";*/
         });
-
-        // Single Tone Service
-        services.AddSingleton<IEmailSender, EmailSender>();
-
-        // Scope Services
-        services.AddScoped<IBaseDapperContext>(_ => new BaseDapperContext(config));
     }
 }

@@ -122,11 +122,11 @@ public class ManageAccountController(
             var userId = await userManager.GetUserIdAsync(user);
             var code = await userManager.GenerateChangeEmailTokenAsync(user, vm.NewEmail);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-            
+
             var callbackUrl = Url.Action(
                 action: "ConfirmEmailChange",
                 controller: "ManageAccount",
-                values: new { area = "Identity", userId = userId, email = vm.NewEmail, code = code },
+                values: new { area = "Identity", userId, email = vm.NewEmail, code },
                 protocol: Request.Scheme
             );
             await emailSender.SendEmailAsync(
@@ -135,12 +135,48 @@ public class ManageAccountController(
                 $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl!)}'>clicking here</a>.");
 
             ViewBag.StatusMessage = "Confirmation link to change email sent. Please check your email.";
-            await userManager.SetEmailAsync(user, vm.NewEmail);
+            // await userManager.SetEmailAsync(user, vm.NewEmail);
             return View(vm);
         }
 
         ViewBag.StatusMessage = "Your email is unchanged.";
         return View(vm);
+    }
+
+    public async Task<IActionResult> ConfirmEmailChange(string? userId, string? email, string? code)
+    {
+        if (userId is null || email is null || code is null)
+        {
+            return RedirectToAction("Index", "ManageAccount", new { area = "Identity" });
+        }
+
+        var user = await userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return NotFound($"Unable to load user with ID '{userId}'.");
+        }
+
+        var decodedCode = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
+        logger.LogInformation($"Decoded CODE :::: {decodedCode}");
+        var result = await userManager.ChangeEmailAsync(user, email, decodedCode);
+        if (!result.Succeeded)
+        {
+            ViewBag.StatusMessage = "Error changing email.";
+            return RedirectToAction("Index", "ManageAccount", new { area = "Identity" });
+        }
+
+        // In our UI email and username are one and the same, so when we update the email
+        // we need to update the username.
+        var setUserNameResult = await userManager.SetUserNameAsync(user, email);
+        if (!setUserNameResult.Succeeded)
+        {
+            ViewBag.StatusMessage = "Error changing user name.";
+            return RedirectToAction("Index", "ManageAccount", new { area = "Identity" });
+        }
+
+        await signInManager.RefreshSignInAsync(user);
+        ViewBag.StatusMessage = "Thank you for confirming your email change.";
+        return RedirectToAction("Index", "ManageAccount", new { area = "Identity" });
     }
 
     public IActionResult ChangePassword()
@@ -288,40 +324,5 @@ public class ManageAccountController(
         logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
 
         return Redirect("~/");
-    }
-
-    public async Task<IActionResult> ConfirmEmailChange(string? userId, string? email, string? code)
-    {
-        if (userId is null || email is null || code is null)
-        {
-            return RedirectToAction("Index", "Home", new { area = "Guest" });
-        }
-
-        var user = await userManager.FindByIdAsync(userId);
-        if (user == null)
-        {
-            return NotFound($"Unable to load user with ID '{userId}'.");
-        }
-
-        code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
-        var result = await userManager.ChangeEmailAsync(user, email, code);
-        if (!result.Succeeded)
-        {
-            ViewBag.StatusMessage = "Error changing email.";
-            return View();
-        }
-
-        // In our UI email and user name are one and the same, so when we update the email
-        // we need to update the user name.
-        var setUserNameResult = await userManager.SetUserNameAsync(user, email);
-        if (!setUserNameResult.Succeeded)
-        {
-            ViewBag.StatusMessage = "Error changing user name.";
-            return View();
-        }
-
-        await signInManager.RefreshSignInAsync(user);
-        ViewBag.StatusMessage = "Thank you for confirming your email change.";
-        return View();
     }
 }
